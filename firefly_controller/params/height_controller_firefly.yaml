@@ -1,0 +1,9 @@
+# Height position controller parameters
+position_gain: 6
+velocity_gain: 4.7
+
+desired_height: 0.5
+desired_velocity: 0
+
+odometry_sub_topic: ground_truth/odometry
+thrust_pub_topic: cmd_RPYthrust

@@ -1,0 +1,47 @@
+<launch>
+
+<!-- Start Gazebo, spawn MAV -->
+<arg name="mav_name" default="firefly"/>
+<arg name="enable_logging" default="false"/>
+<arg name="enable_ground_truth" default="true"/>
+<arg name="log_file" default="$(arg mav_name)"/>
+<arg name="namespace" default="firefly"/>
+
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+      <arg name="world_name" value="$(find rotors_gazebo)/worlds/basic.world"/>
+      <!-- <arg name="debug" value="true" /> -->
+      <arg name="paused" value="false" />
+      <!-- <arg name="gui" value="false" /> -->
+    </include>
+
+<group ns="$(arg mav_name)">
+  <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
+    <arg name="mav_name" value="$(arg mav_name)" />
+    <arg name="model" value="$(find firefly_gazebo_sim)/descriptions/$(arg mav_name)_base_laser_generic_camera.xacro" />
+    <arg name="enable_logging" value="$(arg enable_logging)" />
+    <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
+    <arg name="log_file" value="$(arg log_file)"/>
+  </include>
+
+  <node name="UAV_joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  <node name="UAV_robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+</group>
+
+
+
+<!-- Start controller with ground truth -->
+<group ns="$(arg mav_name)">
+  <!-- Start controller -->
+  <node name="PD_height_controller_node" pkg="firefly_controller" type="pd_height_controller_node" respawn="true" clear_params="true" output="screen">
+    <rosparam file="$(find firefly_controller)/params/height_controller_$(arg mav_name).yaml" />
+  </node>
+
+  <node name="PID_attitude_controller" pkg="mav_lowlevel_attitude_controller" type="mav_pid_attitude_controller_node" respawn="true" clear_params="true" output="screen">
+    <remap from="odometry" to="ground_truth/odometry" />
+    <remap from="command/roll_pitch_yawrate_thrust" to="cmd_RPYthrust" />
+    <rosparam file="$(find mav_lowlevel_attitude_controller)/resources/PID_attitude_$(arg mav_name).yaml" />
+  </node>
+
+</group>
+
+</launch>

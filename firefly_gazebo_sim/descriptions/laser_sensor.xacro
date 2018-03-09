@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+
+  <xacro:macro name="laser_sensor_macro" params="namespace name parent_link laser_topic update_rate frameName *origin">
+          <joint name="${namespace}/${name}_joint" type="revolute">
+            <xacro:insert_block name="origin" />
+            <parent link="${parent_link}"/>
+            <child link="${namespace}/${name}_link"/>
+            <limit upper="0" lower="0" effort="0" velocity="0" />
+	  </joint>
+
+	  <!-- Laser -->
+          <link name="${namespace}/${name}_link">
+	    <collision>
+              <origin xyz="0 0 0" rpy="0 0 0"/>
+	      <geometry>
+                <box size="0.02 0.048 0.04"/>
+	      </geometry>
+	    </collision>
+
+	    <visual>
+              <origin xyz="0 0 0" rpy="0 0 0"/>
+	      <geometry>
+                <box size="0.02 0.048 0.04"/>
+	      </geometry>
+	      <material name="Green">
+		<color rgba="0.0 0.0 0.8 1"/>
+	      </material>
+	    </visual>
+
+	    <inertial>
+              <mass value="0.022" />
+              <origin xyz="0 0 0" rpy="0 0 0"/>
+	      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+	    </inertial>
+	  </link>
+
+	 <!-- Garmin -->
+          <gazebo reference="${namespace}/${name}_link">
+            <sensor type="ray" name="${name}_sensor">
+	      <pose>0 0 0 0 0 0</pose>
+              <visualize>true</visualize>
+              <update_rate>${update_rate}</update_rate>
+	      <ray>
+		<scan>
+		  <horizontal>
+                    <samples>1</samples>
+		    <resolution>1</resolution>
+                    <min_angle>0</min_angle>
+                    <max_angle>0</max_angle>
+		  </horizontal>
+		</scan>
+		<range>
+                  <min>0.10</min>
+		  <max>40.0</max>
+		  <resolution>0.01</resolution>
+		</range>
+		<noise>
+		  <type>gaussian</type>
+		  <!-- Noise parameters based on published spec for Hokuyo laser
+		       achieving "+-30mm" accuracy at range < 10m.  A mean of 0.0m and
+		       stddev of 0.01m will put 99.7% of samples within 0.03m of the true
+		       reading. -->
+		  <mean>0.0</mean>
+                  <stddev>0.02</stddev>
+		</noise>
+	      </ray>
+	      <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_laser.so">
+                <topicName>${laser_topic}</topicName>
+                <frameName>${frameName}</frameName>
+	      </plugin>
+	    </sensor>
+	  </gazebo>
+  </xacro:macro>
+
+</robot>
+

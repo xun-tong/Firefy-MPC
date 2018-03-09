@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2015 Fadri Furrer, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Michael Burri, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Mina Kamel, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Janosch Nikolic, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Markus Achtelik, ASL, ETH Zurich, Switzerland
+  Copyright 2017 Marija Popovic, ASL, ETH Zurich, Switzerland
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<robot name="firefly" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find rotors_description)/urdf/component_snippets.xacro" />
+
+  <!-- Instantiate Firefly's "mechanics" -->
+  <xacro:include filename="$(find rotors_description)/urdf/firefly.xacro" />
+
+  <!-- Include the xacro files of laser -->
+  <xacro:include filename="$(find firefly_gazebo_sim)/descriptions/laser_sensor.xacro" />
+
+  <!-- Include the xacro files of depth camera -->
+  <xacro:include filename="$(find firefly_gazebo_sim)/descriptions/depth_camera.xacro" />
+
+  <xacro:controller_plugin_macro namespace="${namespace}" imu_sub_topic="imu" />
+
+    <!-- ADIS16448 IMU. -->
+    <xacro:imu_plugin_macro
+      namespace="${namespace}"
+      imu_suffix=""
+      parent_link="${namespace}/base_link"
+      imu_topic="imu"
+      mass_imu_sensor="0.015"
+      gyroscope_noise_density="0.0003394"
+      gyroscope_random_walk="0.000038785"
+      gyroscope_bias_correlation_time="1000.0"
+      gyroscope_turn_on_bias_sigma="0.0087"
+      accelerometer_noise_density="0.004"
+      accelerometer_random_walk="0.006"
+      accelerometer_bias_correlation_time="300.0"
+      accelerometer_turn_on_bias_sigma="0.1960">
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001" />
+      <!-- gyroscope_noise_density="0.0003394"
+           gyroscope_turn_on_bias_sigma="0.0087"
+           accelerometer_noise_density="0.004"
+           accelerometer_turn_on_bias_sigma="0.0" -->
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </xacro:imu_plugin_macro>
+
+    <!-- ADIS16448 Magnetometer. -->
+    <xacro:magnetometer_plugin_macro
+      namespace="${namespace}"
+      magnetometer_suffix=""
+      parent_link="${namespace}/base_link"
+      magnetometer_topic="magnetic_field"
+      mass_magnetometer_sensor="0.015"
+      ref_mag_north="0.000021493"
+      ref_mag_east="0.000000815"
+      ref_mag_down="0.000042795"
+      noise_normal="0.000000080 0.000000080 0.000000080"
+      noise_uniform_initial_bias="0.000000400 0.000000400 0.000000400">
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001" />
+      <!--  ref_mag_north="0.000021493"
+            ref_mag_east="0.000000000"
+            ref_mag_down="0.000042795"
+            noise_normal="0.000000080 0.000000080 0.000000080"
+            noise_uniform_initial_bias="0.000000400 0.000000400 0.000000400" -->
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </xacro:magnetometer_plugin_macro>
+
+    <!-- laser range finder -->
+    <xacro:laser_sensor_macro
+      namespace="${namespace}"
+      name="laser_range_finder"
+      parent_link="${namespace}/base_link"
+      laser_topic="laser"
+      frameName="laser_range_finder"
+      update_rate="270" >
+       <!-- update rate: 270Hz -> 3.7ms ?? -->
+      <origin xyz="0 0 0" rpy="0 ${M_PI/2} 0" />
+    </xacro:laser_sensor_macro>
+
+    <!-- depth camera -->
+    <xacro:depth_camera_macro
+      namespace="${namespace}"
+      camera_name="depth_camera"
+      parent_link="${namespace}/base_link"
+      frameName="depth_camera">
+      <origin xyz="0 0 0" rpy="0 ${M_PI/2} 0" />
+    </xacro:depth_camera_macro>
+
+  <xacro:if value="$(arg enable_ground_truth)">
+    <xacro:ground_truth_imu_and_odometry namespace="${namespace}" parent_link="${namespace}/base_link" />
+  </xacro:if>
+
+
+  <xacro:if value="$(arg enable_logging)">
+    <!-- Instantiate a logger -->
+    <xacro:bag_plugin_macro
+      namespace="${namespace}"
+      bag_file="$(arg log_file)"
+      rotor_velocity_slowdown_sim="${rotor_velocity_slowdown_sim}"
+      wait_to_record_bag="$(arg wait_to_record_bag)"/>
+  </xacro:if>
+
+</robot>
+

@@ -1,0 +1,33 @@
+max_speed: 0.5
+sampling_time: 0.01
+
+# model parameters
+A_vel: 0.999
+A_acc_u: 0
+B_acc_u: 0.152
+
+# position state penalty
+Q11: 1.07
+
+# final position state penalty
+S11: 10
+
+# input penalty
+P: 0.0000025
+
+roll_limit: 0.43
+pitch_limit: 0.43
+
+thrust_min: 5
+thrust_max: 20
+
+yaw_rate_limit: 1.57
+
+mass: 1.56779
+
+# PD control for the height
+Kp_z: 6
+Kd_z: 4.7
+
+# yaw rate control
+K_yaw: 1.8

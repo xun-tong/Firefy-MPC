@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<robot name="marker_board" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <link name="base_link" />
+
+    <joint name="base_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="marker" />
+    </joint>
+
+        <link name="marker">
+          <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+              <box size="0.4 0.4 0.001" />
+            </geometry>
+          </collision>
+
+          <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+              <mesh filename="model://aruco_76/meshes/aruco_76.dae" scale="0.4 0.4 0.001" />
+            </geometry>
+          </visual>
+
+          <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="0.001"/>
+            <inertia
+              ixx="1e-6" ixy="0.0" ixz="0.0"
+              iyy="1e-6" iyz="0.0"
+              izz="1e-6"/>
+          </inertial>
+        </link>
+
+    <gazebo reference="marker">
+        <static>true</static>
+    </gazebo>
+
+</robot>
