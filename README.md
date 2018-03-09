@@ -8,9 +8,9 @@ waypoint_navigator: https://github.com/ethz-asl/waypoint_navigator
 mav_control_rw: https://github.com/ethz-asl/mav_control_rw  
 
 ## Subpackages  
-firefly_controller: MPC and Kalman filter  
-firefly_gazebo_sim: launch files   
-firefly_waypoint_navigator: package list of a metapackage  
+`firefly_controller`: MPC and Kalman filter  
+`firefly_gazebo_sim`: launch files   
+`firefly_waypoint_navigator`: package list of a metapackage  
 
 ## Instructions
 only PD control for height (hovering):  
