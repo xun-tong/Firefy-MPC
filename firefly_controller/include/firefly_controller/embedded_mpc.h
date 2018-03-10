@@ -11,14 +11,7 @@
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include <firefly_controller/kf_observer.h>
-#include <ros/ros.h>
-#include <stdio.h>
-#include <mav_msgs/conversions.h>
-#include <mav_msgs/eigen_mav_msgs.h>
-#include <tf/transform_broadcaster.h>
-#include <Eigen/Eigen>
-#include <iostream>
-#include <unsupported/Eigen/MatrixFunctions>
+
 
 
 namespace mav_control {

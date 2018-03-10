@@ -3,7 +3,8 @@
 
 namespace mav_control {
 
-EmbeddedMpcNode::EmbeddedMpcNode()
+EmbeddedMpcNode::EmbeddedMpcNode():
+  receivedReference_(false)
 {
   ros::NodeHandle nh;
   reference_sub_ = nh.subscribe("command/trajectory", 1, &EmbeddedMpcNode::setReference, this);
@@ -16,25 +17,29 @@ EmbeddedMpcNode::~EmbeddedMpcNode(){}
 void EmbeddedMpcNode::setReference(const trajectory_msgs::MultiDOFJointTrajectory& reference)
 {
   embedded_mpc_.setCommandTrajectoryPoint(reference);
-
-  Eigen::Vector4d rpy_thrust;
-  embedded_mpc_.calculateRollPitchYawrateThrustCommand(&rpy_thrust);
-  mav_msgs::RollPitchYawrateThrust attitude_thrust_command;
-  attitude_thrust_command.pitch = rpy_thrust(0);
-  attitude_thrust_command.roll = rpy_thrust(1);
-
-  attitude_thrust_command.yaw_rate = rpy_thrust(2);
-  attitude_thrust_command.thrust.z = rpy_thrust(3);
-
-  attitude_thrust_command.thrust.x = 0;
-  attitude_thrust_command.thrust.y = 0;
-
-  cmd_pub_.publish(attitude_thrust_command);
+  receivedReference_ = true;
+  ROS_INFO_ONCE("embedded MPC: got first reference message");
 }
 
 void EmbeddedMpcNode::setOdometry(const nav_msgs::Odometry &odometry)
 {
   embedded_mpc_.setOdometry(odometry);
+
+  if(receivedReference_ == true){
+    Eigen::Vector4d rpy_thrust;
+    embedded_mpc_.calculateRollPitchYawrateThrustCommand(&rpy_thrust);
+    mav_msgs::RollPitchYawrateThrust attitude_thrust_command;
+    attitude_thrust_command.pitch = rpy_thrust(0);
+    attitude_thrust_command.roll = rpy_thrust(1);
+
+    attitude_thrust_command.yaw_rate = rpy_thrust(2);
+    attitude_thrust_command.thrust.z = rpy_thrust(3);
+
+    attitude_thrust_command.thrust.x = 0;
+    attitude_thrust_command.thrust.y = 0;
+
+    cmd_pub_.publish(attitude_thrust_command);
+  }
 }
 
 }  // end namespace mav_control

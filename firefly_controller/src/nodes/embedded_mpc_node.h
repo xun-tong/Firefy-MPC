@@ -28,6 +28,8 @@ class EmbeddedMpcNode
 
   ros::Publisher cmd_pub_;
 
+  bool receivedReference_;
+
   virtual void setReference(const trajectory_msgs::MultiDOFJointTrajectory &reference);
 
   virtual void setOdometry(const nav_msgs::Odometry &odometry);

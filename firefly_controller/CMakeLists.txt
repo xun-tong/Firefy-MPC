@@ -108,10 +108,9 @@ include_directories(
 ##     and list every .cfg file to be processed
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+ generate_dynamic_reconfigure_options(
+   cfg/PDheight.cfg
+ )
 
 ###################################
 ## catkin specific configuration ##
@@ -145,7 +144,7 @@ catkin_package(
 ###########
 
 add_executable(pd_height_controller_node src/nodes/pd_height_controller_node.cpp)
-add_dependencies(pd_height_controller_node ${catkin_EXPORTED_TARGETS})
+add_dependencies(pd_height_controller_node ${catkin_EXPORTED_TARGETS} $pd_height_controller_gencfg)
 target_link_libraries(pd_height_controller_node ${catkin_LIBRARIES})
 
 add_library(kf_observer src/library/kf_observer.cpp)

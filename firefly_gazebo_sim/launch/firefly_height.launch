@@ -15,25 +15,20 @@
     </include>
 
 <group ns="$(arg mav_name)">
-  <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
-    <arg name="mav_name" value="$(arg mav_name)" />
-    <arg name="model" value="$(find firefly_gazebo_sim)/descriptions/$(arg mav_name)_base_laser_generic_camera.xacro" />
-    <arg name="enable_logging" value="$(arg enable_logging)" />
-    <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
-    <arg name="log_file" value="$(arg log_file)"/>
-  </include>
-
-  <node name="UAV_joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
-  <node name="UAV_robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="$(arg mav_name)" />
+      <arg name="model" value="$(find firefly_gazebo_sim)/descriptions/$(arg mav_name)_base_laser.xacro" />
+      <arg name="enable_logging" value="$(arg enable_logging)" />
+      <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
+      <arg name="log_file" value="$(arg log_file)"/>
+    </include>
 </group>
-
 
 
 <!-- Start controller with ground truth -->
 <group ns="$(arg mav_name)">
   <!-- Start controller -->
   <node name="PD_height_controller_node" pkg="firefly_controller" type="pd_height_controller_node" respawn="true" clear_params="true" output="screen">
-    <rosparam file="$(find firefly_controller)/params/height_controller_$(arg mav_name).yaml" />
   </node>
 
   <node name="PID_attitude_controller" pkg="mav_lowlevel_attitude_controller" type="mav_pid_attitude_controller_node" respawn="true" clear_params="true" output="screen">
@@ -41,6 +36,20 @@
     <remap from="command/roll_pitch_yawrate_thrust" to="cmd_RPYthrust" />
     <rosparam file="$(find mav_lowlevel_attitude_controller)/resources/PID_attitude_$(arg mav_name).yaml" />
   </node>
+
+
+    <!-- waypoint navigator -->
+    <node name="waypoint_navigator_node" pkg="waypoint_navigator" type="waypoint_navigator_node"  respawn="true" clear_params="true" output="screen">
+      <rosparam file="$(find waypoint_navigator)/paths/trajectory_simple_enu.yaml"/>
+      <param name="mav_name" type="string" value="$(arg namespace)" />
+      <param name="frame_id" type="string" value="world" />
+      <!-- Real -->
+      <!-- remap from="odometry" to="msf_core/odometry" / -->
+      <!-- Simulation -->
+      <remap from="odometry" to="ground_truth/odometry" />
+    </node>
+
+    <node name="trajectory_sampler" pkg="mav_trajectory_generation_ros" type="trajectory_sampler_node" output="screen" />
 
 </group>
 
