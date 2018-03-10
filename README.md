@@ -20,8 +20,8 @@ only PD control for height (hovering):
 >Open the GUI of dynamic reconfigure, where `softlanding` can be enabled:
 <pre><code> rosrun rqt_reconfigure rqt_reconfigure </code></pre>
 >The UAV which has reached the target height 1m, will then land softly to the ground. If we disable `softlanding` again, the UAV will return to the previous target heigh 1m.
-
-
+      
+      
 MPC for x and y, and PD control for z:
 <pre><code> roslaunch firefly_gazebo_sim firefly_embedded_mpc.launch </code></pre>
 >Need to wait for a while, until the message `[INFO] embedded MPC: initialized correctly` shows up in the command window. Because the calculation for initializing matrices of model and controller takes time. Then we can send a reference waypoint using a service from the package `waypoint_navigator`:
