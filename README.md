@@ -13,7 +13,7 @@ mav_control_rw: https://github.com/ethz-asl/mav_control_rw
 `firefly_waypoint_navigator`: package list of a metapackage  
 
 ## Instructions
-only PD control for height (hovering):  
+only PD control for height (hovering and soft landing):  
 <pre><code> roslaunch firefly_gazebo_sim firefly_height.launch </code></pre>    
 >Send a reference waypoint using a service from the package `waypoint_navigator`, but only the z value will be used as target height:
 <pre><code> rosservice call /firefly/go_to_waypoint "point: [0, 0, 1]" </code></pre>
