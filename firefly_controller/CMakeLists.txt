@@ -159,6 +159,10 @@ add_executable(embedded_mpc_node src/nodes/embedded_mpc_node.cpp)
 add_dependencies(embedded_mpc_node embedded_mpc kf_observer ${catkin_EXPORTED_TARGETS})
 target_link_libraries(embedded_mpc_node embedded_mpc kf_observer ${catkin_LIBRARIES})
 
+add_executable(test_kf_node src/nodes/test_kf_node.cpp)
+add_dependencies(test_kf_node kf_observer ${catkin_EXPORTED_TARGETS})
+target_link_libraries(test_kf_node kf_observer ${catkin_LIBRARIES})
+
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations

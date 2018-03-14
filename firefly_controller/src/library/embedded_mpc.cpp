@@ -35,13 +35,24 @@ void embeddedMPC::initializeParameters()
     abort();
   }
 
-  if (!pnh.getParam("Q11", Q11_)) {
-    ROS_ERROR("Q11 in embedded_mpc is not loaded from ros parameter server");
+  double Q_pos, Q_vel, Q_att, Q_dis;
+  if (!pnh.getParam("Q_pos", Q_pos)) {
+    ROS_ERROR("Q_pos in embedded_mpc is not loaded from ros parameter server");
     abort();
   }
 
-  if (!pnh.getParam("S11", S11_)) {
-    ROS_ERROR("S11 in embedded_mpc is not loaded from ros parameter server");
+  if (!pnh.getParam("Q_vel", Q_vel)) {
+    ROS_ERROR("Q_vel in embedded_mpc is not loaded from ros parameter server");
+    abort();
+  }
+
+  if (!pnh.getParam("Q_att", Q_att)) {
+    ROS_ERROR("Q_att in embedded_mpc is not loaded from ros parameter server");
+    abort();
+  }
+
+  if (!pnh.getParam("Q_dis", Q_dis)) {
+    ROS_ERROR("Q_dis in embedded_mpc is not loaded from ros parameter server");
     abort();
   }
 
@@ -90,35 +101,17 @@ void embeddedMPC::initializeParameters()
     abort();
   }
 
-  double A_vel_, A_acc_u_, B_acc_u_;
-
-  if (!pnh.getParam("A_vel", A_vel_)) {
-    ROS_ERROR("A_vel in embedded_mpc is not loaded from ros parameter server");
-    abort();
-  }
-
-  if (!pnh.getParam("A_acc_u",A_acc_u_)) {
-    ROS_ERROR("A_acc_u in embedded_mpc is not loaded from ros parameter server");
-    abort();
-  }
-
-  if (!pnh.getParam("B_acc_u", B_acc_u_)) {
-    ROS_ERROR("B_acc_u in embedded_mpc is not loaded from ros parameter server");
-    abort();
-  }
-
   if (!pnh.getParam("K_yaw", K_yaw_)) {
     ROS_ERROR("K_yaw in embedded_mpc is not loaded from ros parameter server");
     abort();
   }
 
-  model_A_ << 1,  sampling_time_,    0,                 0,          0,
-              0,  1,                 sampling_time_,    0,          0,
-              0,  0,                 0,                 1,          1,
-              0,  A_vel_,            0,                 A_acc_u_,   0,
-              0,  0,                 0,                 0,          1;
+  model_A_ << 1,  0.09995,    0.043,   0.00494836,
+              0,  0.999,      0.81,    0.0999505,
+              0,  0,          0.673,   0,
+              0,  0,          0,       1;
 
-  model_B_ << 0,  0,  0,  B_acc_u_,  0;
+  model_B_ << 0.0052,  0.152,  0.295,  0;
 
   ROS_INFO_STREAM("model_A_: \n" <<model_A_);
   ROS_INFO_STREAM("model_B_: \n" <<model_B_);
@@ -182,18 +175,30 @@ void embeddedMPC::initializeParameters()
   ROS_INFO_STREAM("B_roof_reduced cols: " << B_roof_reduced.cols());
 
   // Q_
-  Q_ << Q11_, 0, 0, 0, 0,
-           0, 0, 0, 0, 0,
-           0, 0, 0, 0, 0,
-           0, 0, 0, 0, 0,
-           0, 0, 0, 0, 0;
+  Q_ <<  Q_pos, 0,      0,      0,
+         0,     Q_vel,  0,      0,
+         0,     0,      Q_att,  0,
+         0,     0,      0,      Q_dis;
+
+  ROS_INFO_STREAM("Q_: \n" <<Q_);
 
   // S_
-  S_ << S11_, 0, 0, 0, 0,
-           0, 0, 0, 0, 0,
-           0, 0, 0, 0, 0,
-           0, 0, 0, 0, 0,
-           0, 0, 0, 0, 0;
+  //Compute terminal cost
+  //Q_final(k+1) = A'*Q_final(k)*A - (A'*Q_final(k)*B)*inv(B'*Q_final(k)*B+R)*(B'*Q_final(k)*A)+ Q;
+  S_ = Q_;                                                // Q_final: terminal state error penalty   by Xun
+  for (int i = 0; i < 1000; i++) {
+    double temp = (model_B_.transpose() * S_ * model_B_ + P_);
+    S_ = model_A_.transpose() * S_ * model_A_
+        - (model_A_.transpose() * S_ * model_B_) / temp
+            * (model_B_.transpose() * S_ * model_A_) + Q_;
+  }
+  ROS_INFO_STREAM("S_: \n" <<S_);
+
+//  S_ << S11_, 0, 0, 0, 0,
+//           0, 0, 0, 0, 0,
+//           0, 0, 0, 0, 0,
+//           0, 0, 0, 0, 0,
+//           0, 0, 0, 0, 0;
 
   // Q_roof = [Q,   0,   ...,  0;
   //           0,   Q,   ...,  0;
@@ -225,6 +230,7 @@ void embeddedMPC::initializeParameters()
   Eigen::MatrixXd H_(kReducedHorizonSteps, kReducedHorizonSteps);
   H_ = B_roof_reduced.transpose()*Q_roof*B_roof_reduced + P_roof;
   H_inv = (0.5*H_).inverse();
+//  H_inv = H_.inverse();
 
   ROS_INFO_STREAM("H_inv rows: " << H_inv.rows());
   ROS_INFO_STREAM("H_inv cols: " << H_inv.cols());
@@ -292,8 +298,6 @@ void embeddedMPC::setCommandTrajectoryPoint(
 void embeddedMPC::calculateRollPitchYawrateThrustCommand(
     Eigen::Vector4d *ref_attitude_thrust)
 {
-
-  Eigen::VectorXd KF_estimated_state;
   Eigen::Vector3d velocity_W = odometry_.getVelocityWorld();
 
   Eigen::Vector3d current_rpy;
@@ -304,103 +308,115 @@ void embeddedMPC::calculateRollPitchYawrateThrustCommand(
 
 
   // x-pitch
+  Eigen::VectorXd KF_estimated_state_x;
 
   // body frame to world frame
   double cmd_pitch_W = cos(yaw) * command_roll_pitch_yaw_thrust_(1) + sin(yaw) * command_roll_pitch_yaw_thrust_(0);
+  double pitch_W = cos(yaw) * pitch + sin(yaw) * roll;
+
   // update the disturbance observer
   kf_observer_.feedAttitudeCommand(cmd_pitch_W);
 //  kf_observer_.feedVelocityMeasurement(velocity_W(0));
-  kf_observer_.feedPositionMeasurement(odometry_.position_W(0));    // use position as measurement
+//  kf_observer_.feedPositionMeasurement(odometry_.position_W(0));
+  kf_observer_.feedMeasurement(odometry_.position_W(0), velocity_W(0), pitch_W);
 
-  bool observer_update_successful = kf_observer_.updateEstimator();
+  bool observer_update_successful = kf_observer_.updateEstimatorX();
 
-  ROS_INFO_STREAM("observer_update_successful : " << observer_update_successful);
+  ROS_INFO_STREAM("observer_update_successful x : " << observer_update_successful);
 
   if (!observer_update_successful) {
     // reset the disturbance observer
-    kf_observer_.reset(odometry_.position_W(0));
+    kf_observer_.resetX(odometry_.position_W(0));
   }
 
-  kf_observer_.getEstimatedState(&KF_estimated_state);
+  kf_observer_.getEstimatedStateX(&KF_estimated_state_x);
 
-  ROS_INFO_STREAM("KF_estimated_state x : \n" << KF_estimated_state);
+  ROS_INFO_STREAM("KF_estimated_state x : \n" << KF_estimated_state_x);
   ROS_INFO_STREAM("ground truth x : " << odometry_.position_W(0));
   ROS_INFO_STREAM("ground truth vx : " << velocity_W(0));
+  ROS_INFO_STREAM("ground truth pitch_W : " << pitch_W);
 
   // filter the reference
   x_allstate_reference_ = Eigen::MatrixXd::Zero(kPredictionHorizonSteps * kStateSize, 1);
-  x_allstate_reference_(0) = KF_estimated_state(0);
+  x_allstate_reference_(0) = KF_estimated_state_x(0);
 
   double diff_limit = max_speed_ * sampling_time_;
   for(int i = 2; i <= kPredictionHorizonSteps; i++){
-    double difference = x_allstate_reference_(5*(i-2)) - x_reference_(i-1);
+    double difference = x_allstate_reference_(kStateSize*(i-2)) - x_reference_(i-1);
     if(difference > diff_limit){
       difference = diff_limit;
     }
     else if(difference < -diff_limit){
       difference = -diff_limit;
     }
-    x_allstate_reference_(5*(i-1)) = x_allstate_reference_(5*(i-2)) - difference;
+    x_allstate_reference_(kStateSize*(i-1)) = x_allstate_reference_(kStateSize*(i-2)) - difference;
   }
 
   // calculate MPC
   Eigen::MatrixXd temp_vector1(kPredictionHorizonSteps * kStateSize, 1);
-  temp_vector1 = A_roof*KF_estimated_state - x_allstate_reference_;
+  temp_vector1 = A_roof*KF_estimated_state_x - x_allstate_reference_;
   for(int i = 0; i < kPredictionHorizonSteps * kStateSize; i++){
     temp_vector1(i, 0) = temp_vector1(i, 0) * Q_roof(i, i);
   }
   Eigen::MatrixXd input_opt(kReducedHorizonSteps, 1);
   input_opt = -H_inv * (temp_vector1.transpose() * B_roof_reduced).transpose() * 0.5;
+//  input_opt = -H_inv * (temp_vector1.transpose() * B_roof_reduced).transpose();
 
   double pitch_cmd = input_opt(0);
 
 
   // y-roll
+  Eigen::VectorXd KF_estimated_state_y;
 
-  // update the disturbance observer
   // body frame to world frame
   double cmd_roll_W = -sin(yaw) * command_roll_pitch_yaw_thrust_(1) + cos(yaw) * command_roll_pitch_yaw_thrust_(0);
+  double roll_W = -sin(yaw) * pitch + cos(yaw) * roll;
+
+  // update the disturbance observer
   kf_observer_.feedAttitudeCommand(- cmd_roll_W);   // minus for roll
 //  kf_observer_.feedVelocityMeasurement(velocity_W(1));
-  kf_observer_.feedPositionMeasurement(odometry_.position_W(1));    // use position as measurement
+//  kf_observer_.feedPositionMeasurement(odometry_.position_W(1));
+  kf_observer_.feedMeasurement(odometry_.position_W(1), velocity_W(1), - roll_W);   // minus for roll
 
   observer_update_successful = false;
-  observer_update_successful = kf_observer_.updateEstimator();
+  observer_update_successful = kf_observer_.updateEstimatorY();
 
-  ROS_INFO_STREAM("observer_update_successful : " << observer_update_successful);
+  ROS_INFO_STREAM("observer_update_successful y : " << observer_update_successful);
 
   if (!observer_update_successful) {
     // reset the disturbance observer
-    kf_observer_.reset(odometry_.position_W(1));
+    kf_observer_.resetY(odometry_.position_W(1));
   }
 
-  kf_observer_.getEstimatedState(&KF_estimated_state);
+  kf_observer_.getEstimatedStateY(&KF_estimated_state_y);
 
-  ROS_INFO_STREAM("KF_estimated_state y : \n" << KF_estimated_state);
+  ROS_INFO_STREAM("KF_estimated_state y : \n" << KF_estimated_state_y);
   ROS_INFO_STREAM("ground truth y : " << odometry_.position_W(1));
   ROS_INFO_STREAM("ground truth vy : " << velocity_W(1));
+  ROS_INFO_STREAM("ground truth -roll_W : " << -roll_W);
 
   // filter the reference
   y_allstate_reference_ = Eigen::MatrixXd::Zero(kPredictionHorizonSteps * kStateSize, 1);
-  y_allstate_reference_(0) = KF_estimated_state(0);
+  y_allstate_reference_(0) = KF_estimated_state_y(0);
 
   for(int i = 2; i <= kPredictionHorizonSteps; i++){
-    double difference = y_allstate_reference_(5*(i-2)) - y_reference_(i-1);
+    double difference = y_allstate_reference_(kStateSize*(i-2)) - y_reference_(i-1);
     if(difference > diff_limit){
       difference = diff_limit;
     }
     else if(difference < -diff_limit){
       difference = -diff_limit;
     }
-    y_allstate_reference_(5*(i-1)) = y_allstate_reference_(5*(i-2)) - difference;
+    y_allstate_reference_(kStateSize*(i-1)) = y_allstate_reference_(kStateSize*(i-2)) - difference;
   }
 
   // calculate MPC
-  temp_vector1 = A_roof*KF_estimated_state - y_allstate_reference_;
+  temp_vector1 = A_roof*KF_estimated_state_y - y_allstate_reference_;
   for(int i = 0; i < kPredictionHorizonSteps * kStateSize; i++){
     temp_vector1(i, 0) = temp_vector1(i, 0) * Q_roof(i, i);
   }
   input_opt = -H_inv * (temp_vector1.transpose() * B_roof_reduced).transpose() * 0.5;
+//  input_opt = -H_inv * (temp_vector1.transpose() * B_roof_reduced).transpose();
 
   double roll_cmd = -input_opt(0);     // minus for roll
 

@@ -35,9 +35,9 @@ class embeddedMPC
  private:
 
   // constants
-  static constexpr int kStateSize = 5;
+  static constexpr int kStateSize = 4;
   static constexpr int kInputSize = 1;
-  static constexpr int kMeasurementSize = 1;
+  static constexpr int kMeasurementSize = 3;
   static constexpr int kPredictionHorizonSteps = 200;
   static constexpr int kReducedHorizonSteps = 20;
   static constexpr double kGravity = 9.8066;
@@ -49,8 +49,7 @@ class embeddedMPC
 
   double max_speed_;
   double sampling_time_;
-  double Q11_;
-  double S11_;
+
   double P_;
 
   double mass_;

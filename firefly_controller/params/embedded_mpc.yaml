@@ -1,19 +1,14 @@
 max_speed: 0.5
 sampling_time: 0.01
 
-# model parameters
-A_vel: 0.999
-A_acc_u: 0
-B_acc_u: 0.152
-
 # position state penalty
-Q11: 1.07
-
-# final position state penalty
-S11: 10
+Q_pos: 40
+Q_vel: 20
+Q_att: 20
+Q_dis: 10
 
 # input penalty
-P: 0.0000025
+P: 35
 
 roll_limit: 0.43
 pitch_limit: 0.43

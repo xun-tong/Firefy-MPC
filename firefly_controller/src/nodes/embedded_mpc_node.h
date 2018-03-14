@@ -1,7 +1,6 @@
 #ifndef EMBEDDED_MPC_NODE_H
 #define EMBEDDED_MPC_NODE_H
 
-
 #include <boost/bind.hpp>
 #include <Eigen/Eigen>
 #include <stdio.h>
@@ -36,5 +35,6 @@ class EmbeddedMpcNode
   };
 
 }
+
 
 #endif // EMBEDDED_MPC_NODE_H
